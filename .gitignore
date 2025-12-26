@@ -55,6 +55,7 @@ modules.builtin
 #
 !.gitignore
 !.mailmap
+!.dockerignore
 
 #
 # Generated include files
@@ -91,3 +92,7 @@ extra_certificates
 signing_key.priv
 signing_key.x509
 x509.genkey
+
+# Following created by Methry, for branch init/docker:
+/output/*
+!/output/.gitkeep
