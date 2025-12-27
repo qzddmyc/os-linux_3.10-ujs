@@ -55,7 +55,6 @@ modules.builtin
 #
 !.gitignore
 !.mailmap
-!.dockerignore
 
 #
 # Generated include files
@@ -96,3 +95,4 @@ x509.genkey
 # Following created by Methry, for branch init/docker:
 /output/*
 !/output/.gitkeep
+!.dockerignore
