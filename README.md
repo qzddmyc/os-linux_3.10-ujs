@@ -180,11 +180,9 @@
 ### 关于代码的二次编译
 
 如果你的代码已经被编译过了，你在修改了代码之后想重新编译，你可以使用以下命令。初始目录需要在项目根目录（os-linux_3.10-ujs 文件夹）：
-
-    ```bash
-    sudo rm ./output/bzImage
-    cd ~
-    sudo rm -rf ./os-run/
-    ```
-
+```bash
+sudo rm ./output/bzImage
+cd ~
+sudo rm -rf ./os-run/
+```
 之后，再切回项目根目录，重新执行“编译与运行你的内核”部分的命令即可。
