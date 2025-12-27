@@ -89,11 +89,20 @@
     make ARCH=x86 i386_defconfig
     make ARCH=x86 -j$(nproc)
     ```
-3. 拷贝出结果：
+3. 拷贝出结果并退出：
     ```bash
     cp arch/x86/boot/bzImage /output/
+    exit
     ```
     拷贝完成后，编译出的文件位于项目目录的 ./output/bzImage
+
+    拷贝成功的标标志为出现以下内容（大致相同即可）：
+    ```text
+    Setup is 14864 bytes (padded to 15360 bytes).
+    System is 5285 kB
+    CRC 309f814c
+    Kernel: arch/x86/boot/bzImage is ready  (#1)
+    ```
 4. 准备运行工作：
 
     *注意：下方命令中最后一条中的 ~/Your-Path/os-linux_3.10-ujs 需要替换为你的实际项目目录，你可以使用 pwd 命令查看当前所在的目录*
@@ -110,6 +119,7 @@
     ```bash
     git clone https://git.busybox.net/busybox
     cd busybox
+    make distclean
     make defconfig
     sed -i 's/# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
     sed -i 's/CONFIG_EXTRA_CFLAGS=""/CONFIG_EXTRA_CFLAGS="-m32"/' .config
@@ -126,6 +136,15 @@
     make install CONFIG_PREFIX=../_install
     ```
     过程会出现很多 warning，无关紧要。
+
+    成功的标志为出现以下内容：
+    ```text
+    --------------------------------------------------
+    You will probably need to make your busybox binary
+    setuid root to ensure all configured applets will
+    work properly.
+    --------------------------------------------------
+    ```
 8. 创建环境：
     ```bash
     cd ~/os-run
@@ -158,6 +177,8 @@
       -serial mon:stdio
     ```
     会有很多日志输出，停止后按几下 Enter，出现#号即为成功。
+
+    *如果想要退出，按下 Ctrl+A，松开后按下 X 即可。*
 
 ## 其他事项
 ### 如何在 wsl 中使用 vpn
