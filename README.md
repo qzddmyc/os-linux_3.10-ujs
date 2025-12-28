@@ -18,13 +18,13 @@
    ```
    *你需要将 your-feature-name 改为你想取的分支名字。*
 
-   *注意，在每次执行编码前，请使用 git branch 查看你此时所在的分支！如果此时在 main，请使用 git checkout feat/your-feature-name 进入你的分支！*
+   ***注意，在每次执行编码前，请使用 git branch 查看你此时所在的分支！如果此时在 main，请使用 git checkout feat/your-feature-name 进入你的分支！***
 3. 完成代码修改后，提交代码:
    ```bash
    git add .
    git commit -m "feat: add your feature description"
    ```
-   你可以在 commit 的引号内写入你本次修改的主要内容。**请务必作出个性化修改，不要直接使用 add your feature description 作为说明！同时，你的类型前缀需要遵守 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) 命名规范。**
+   你可以在 commit 的引号内写入你本次修改的主要内容。*请务必作出个性化修改，不要直接使用 add your feature description 作为说明！同时，你的类型前缀需要遵守 [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) 命名规范。*
 4. Push 分支到远程仓库:
    ```bash
    git push origin feat/your-feature-name
@@ -114,7 +114,7 @@
     拷贝完成后，编译出的文件位于项目目录的 ./output/bzImage
 4. 准备运行工作：
 
-    ***注意：下方命令中最后一条中的 \~/Your-Path/os-linux_3.10-ujs 需要替换为你的实际项目目录，你可以使用 pwd 命令查看当前所在的目录 (如果你按照上面的操作进行，你的项目目录在：\~/os-linux_3.10-ujs)***
+    ***注意：下方命令中最后一条中的 ~/os-linux_3.10-ujs 需要替换为你的实际项目目录，你可以使用 pwd 命令查看当前所在的目录。如果你使用此文档中的命令拉取的仓库，则不需要进行任何修改。***
 
     ```bash
     sudo apt update
@@ -122,14 +122,14 @@
     sudo apt install -y gcc-multilib
     mkdir -p ~/os-run
     cd ~/os-run
-    cp ~/Your-Path/os-linux_3.10-ujs/output/bzImage ~/os-run/
+    cp ~/os-linux_3.10-ujs/output/bzImage ~/os-run/
     ```
 5. 克隆 busybox 并准备编译：
 
-    ***注意：这里第一条命令中 ~/Your-Path/os-linux_3.10-ujs 同样需要替换为你的实际项目目录。***
+    ***注意：这里第一条命令中 ~/os-linux_3.10-ujs 同样需要替换为你的实际项目目录。***
 
     ```bash
-    cp -r ~/Your-Path/os-linux_3.10-ujs/busybox/. ./busybox/
+    cp -r ~/os-linux_3.10-ujs/busybox/. ./busybox/
     cd busybox
     make defconfig
     sed -i 's/# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
@@ -186,7 +186,7 @@
     ```
     成功的标志为出现：4734 blocks。这个数字可能不同，但只要不是个位数就可以。
 
-    **如果需要在你编译出的系统中添加测试文件，请在 chmod +x ~/os-run/initramfs/init 步骤后，在 ~/os-run/initramfs 目录下添加你想要带到新系统中的额外初始文件，之后按照剩余步骤执行即可。**
+    **如果需要在你编译出的系统中添加测试文件，请在 chmod +x ~/os-run/initramfs/init 步骤后，在 ~/os-run/initramfs 目录下添加你想要带到新系统中的额外初始文件，之后按照剩余步骤执行即可。值得说明的是，initramfs 文件夹就是你创建的新系统的根目录**
 9. 运行：
     ```bash
     cd ~/os-run
