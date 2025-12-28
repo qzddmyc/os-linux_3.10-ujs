@@ -10,6 +10,8 @@
    git checkout main
    ```
    实验将基于 main 分支进行开发。*注意，请将文件夹放至虚拟机文件夹下，不可以放在 /mnt 中！*
+
+   如果 clone 出现问题，请向下翻，查看“wsl 中无法链接到 github 仓库的解决方案”。
 2. 新建分支进行开发:
    ```bash
    git checkout -b feat/your-feature-name origin/main
@@ -112,7 +114,7 @@
     拷贝完成后，编译出的文件位于项目目录的 ./output/bzImage
 4. 准备运行工作：
 
-    ***注意：下方命令中最后一条中的 ~/Your-Path/os-linux_3.10-ujs 需要替换为你的实际项目目录，你可以使用 pwd 命令查看当前所在的目录 (如果你按照上面的操作进行，你的项目目录在：~/os-linux_3.10-ujs)***
+    ***注意：下方命令中最后一条中的 \~/Your-Path/os-linux_3.10-ujs 需要替换为你的实际项目目录，你可以使用 pwd 命令查看当前所在的目录 (如果你按照上面的操作进行，你的项目目录在：\~/os-linux_3.10-ujs)***
 
     ```bash
     sudo apt update
