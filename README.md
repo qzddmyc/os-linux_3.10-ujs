@@ -91,14 +91,7 @@
     make ARCH=x86 -j$(nproc)
 
     ```
-3. 拷贝出结果并退出：
-    ```bash
-    cp arch/x86/boot/bzImage /output/
-    exit
-    ```
-    拷贝完成后，编译出的文件位于项目目录的 ./output/bzImage
-
-    编译成功的标标志为出现以下内容（大致相同即可）：
+    编译成功的标志为出现以下内容（大致相同即可）：
     ```text
     # 注意这部分不是命令
 
@@ -107,6 +100,12 @@
     CRC 309f814c
     Kernel: arch/x86/boot/bzImage is ready  (#1)
     ```
+3. 拷贝出结果并退出：
+    ```bash
+    cp arch/x86/boot/bzImage /output/
+    exit
+    ```
+    拷贝完成后，编译出的文件位于项目目录的 ./output/bzImage
 4. 准备运行工作：
 
     ***注意：下方命令中最后一条中的 ~/Your-Path/os-linux_3.10-ujs 需要替换为你的实际项目目录，你可以使用 pwd 命令查看当前所在的目录***
