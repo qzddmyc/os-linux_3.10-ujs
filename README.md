@@ -4,6 +4,7 @@
 请遵循以下步骤提交代码：
 1. 克隆仓库到本地：
    ```bash
+   cd ~
    git clone https://github.com/qzddmyc/os-linux_3.10-ujs.git
    cd os-linux_3.10-ujs
    git checkout main
@@ -14,6 +15,8 @@
    git checkout -b feat/your-feature-name origin/main
    ```
    *你需要将 your-feature-name 改为你想取的分支名字。*
+
+   *注意，在每次执行编码前，请使用 git branch 查看你此时所在的分支！如果此时在 main，请使用 git checkout feat/your-feature-name 进入你的分支！*
 3. 完成代码修改后，提交代码:
    ```bash
    git add .
@@ -100,6 +103,7 @@
     CRC 309f814c
     Kernel: arch/x86/boot/bzImage is ready  (#1)
     ```
+    *如果编译出现报错，可能是你的代码存在一些 bug。请使用 "exit" 退出 docker 环境并修改你的代码，之后重新从第1步（创建容器）开始重新操作。*
 3. 拷贝出结果并退出：
     ```bash
     cp arch/x86/boot/bzImage /output/
@@ -108,7 +112,7 @@
     拷贝完成后，编译出的文件位于项目目录的 ./output/bzImage
 4. 准备运行工作：
 
-    ***注意：下方命令中最后一条中的 ~/Your-Path/os-linux_3.10-ujs 需要替换为你的实际项目目录，你可以使用 pwd 命令查看当前所在的目录***
+    ***注意：下方命令中最后一条中的 ~/Your-Path/os-linux_3.10-ujs 需要替换为你的实际项目目录，你可以使用 pwd 命令查看当前所在的目录 (如果你按照上面的操作进行，你的项目目录在：~/os-linux_3.10-ujs)***
 
     ```bash
     sudo apt update
@@ -234,3 +238,39 @@
 ### 关于 raw 分支
 
 1. raw 分支为未进行任何开发时的源码备份，不可以进行任何修改，已作锁定。
+
+### 如何在 vscode 中打开 wsl 中的文件
+
+1. 前往扩展商店下载 “WSL” 插件，注意是 Microsoft 发行的。
+
+2. 在 vscode 顶端的搜索框输入：“> wsl”，选择 “Connect to wsl”，然后打开你的项目文件夹即可。
+
+### wsl 中无法链接到 github 仓库的解决方案
+
+1. 在 wsl 中输入以下命令，创建你的 ssh key：
+    ```bash
+    ssh-keygen -t ed25519 -C "你的GitHub邮箱"
+    ```
+    之后一路回车即可。
+2. 使用以下命令，得到你的公钥：
+    ```bash
+    cat ~/.ssh/id_ed25519.pub
+    ```
+    然后复制屏幕出现的你的公钥到剪贴板。
+3. 按照以下操作执行：GitHub → 头像 → Settings → SSH and GPG keys → New SSH key → 粘贴公钥并随意取个名字 → 保存。
+4. 在wsl中使用以下命令：
+    ```bash
+    vim ~/.ssh/config
+    ```
+    然后，按照 vim 编辑器的方式将以下内容贴进去：
+    ```text
+    Host github.com
+      Hostname ssh.github.com
+      Port 443
+      User git
+    ```
+5. 然后使用以下方式去拉取代码即可：
+    ```bash
+    cd ~
+    git clone git@github.com:qzddmyc/os-linux_3.10-ujs.git
+    ```
