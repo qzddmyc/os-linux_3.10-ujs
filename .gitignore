@@ -96,3 +96,8 @@ x509.genkey
 /output/*
 !/output/.gitkeep
 !.dockerignore
+!/busybox/
+
+# protect busybox:
+!busybox/
+!busybox/**

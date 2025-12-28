@@ -13,7 +13,7 @@
    ```bash
    git checkout -b feat/your-feature-name origin/main
    ```
-   *你需要将 your-feature-name 改为你想取的分支名字*，下面出现 your-feature-name 的部分一样。
+   *你需要将 your-feature-name 改为你想取的分支名字。*
 3. 完成代码修改后，提交代码:
    ```bash
    git add .
@@ -24,6 +24,7 @@
    ```bash
    git push origin feat/your-feature-name
    ```
+   *这里的 your-feature-name 要使用你刚刚取的分支名。*
 5. 在 GitHub 上创建 Pull Request，描述你的修改内容。
 > 注意：main 分支已做分支保护，**请勿直接在 main 分支上进行修改**。
 
@@ -88,6 +89,7 @@
     make V=1 mrproper
     make ARCH=x86 i386_defconfig
     make ARCH=x86 -j$(nproc)
+
     ```
 3. 拷贝出结果并退出：
     ```bash
@@ -96,8 +98,10 @@
     ```
     拷贝完成后，编译出的文件位于项目目录的 ./output/bzImage
 
-    拷贝成功的标标志为出现以下内容（大致相同即可）：
+    编译成功的标标志为出现以下内容（大致相同即可）：
     ```text
+    # 注意这部分不是命令
+
     Setup is 14864 bytes (padded to 15360 bytes).
     System is 5285 kB
     CRC 309f814c
@@ -105,7 +109,7 @@
     ```
 4. 准备运行工作：
 
-    *注意：下方命令中最后一条中的 ~/Your-Path/os-linux_3.10-ujs 需要替换为你的实际项目目录，你可以使用 pwd 命令查看当前所在的目录*
+    ***注意：下方命令中最后一条中的 ~/Your-Path/os-linux_3.10-ujs 需要替换为你的实际项目目录，你可以使用 pwd 命令查看当前所在的目录***
 
     ```bash
     sudo apt update
@@ -116,10 +120,12 @@
     cp ~/Your-Path/os-linux_3.10-ujs/output/bzImage ~/os-run/
     ```
 5. 克隆 busybox 并准备编译：
+
+    ***注意：这里第一条命令中 ~/Your-Path/os-linux_3.10-ujs 同样需要替换为你的实际项目目录。***
+
     ```bash
-    git clone https://git.busybox.net/busybox
+    cp -r ~/Your-Path/os-linux_3.10-ujs/busybox/. ./busybox/
     cd busybox
-    make distclean
     make defconfig
     sed -i 's/# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
     sed -i 's/CONFIG_EXTRA_CFLAGS=""/CONFIG_EXTRA_CFLAGS="-m32"/' .config
@@ -129,16 +135,22 @@
     ```bash
     make menuconfig
     ```
-    你需要通过上下键找到 Networking Utilities，按下Enter，向下翻找到 tc，按下空格（Space）取消勾选，再通过左右键退出两次，最后选择保存。
+    你需要通过上下键找到 Networking Utilities，按下Enter，向下翻找到 tc，按下空格（Space）取消勾选，再通过左右键选中 Exit，退出两次，最后选择保存。
+
+    如果未能打开一个 GUI 界面，有可能是你的窗口太小了。
 7. 编译 busybox：
     ```bash
     make -j$(nproc)
     make install CONFIG_PREFIX=../_install
+    mkdir ~/os-run/initramfs/
+    cp -a ../_install/* ~/os-run/initramfs/
     ```
     过程会出现很多 warning，无关紧要。
 
     成功的标志为出现以下内容：
     ```text
+    # 注意这部分不是命令
+
     --------------------------------------------------
     You will probably need to make your busybox binary
     setuid root to ensure all configured applets will
@@ -165,6 +177,7 @@
     cd ~/os-run/initramfs
     find . | cpio -o -H newc | gzip > ../initramfs.img
     ```
+    成功的标志为出现：4734 blocks。这个数字可能不同，但只要不是个位数就可以。
 9. 运行：
     ```bash
     cd ~/os-run
@@ -200,10 +213,21 @@
 
 ### 关于代码的二次编译
 
-如果你的代码已经被编译过了，你在修改了代码之后想重新编译，你可以使用以下命令。初始目录需要在项目根目录（os-linux_3.10-ujs 文件夹）：
-```bash
-sudo rm ./output/bzImage
-cd ~
-sudo rm -rf ./os-run/
-```
-之后，再切回项目根目录，重新执行“编译与运行你的内核”部分的命令即可。
+1. 如果你的代码已经被编译过了，你在修改了代码之后想重新编译，你可以使用以下命令。初始目录需要在项目根目录（os-linux_3.10-ujs 文件夹）：
+    ```bash
+    sudo rm ./output/bzImage
+    cd ~
+    sudo rm -rf ./os-run/
+    # 一定不要忘记切回到项目目录！！！
+    ```
+    之后，再切回项目根目录，重新执行“编译与运行你的内核”部分的命令即可。
+
+### 关于此项目中的 busybox 目录
+
+1. 这里的 busybox 是使用以下方式获取的，在此略作说明：
+    ```bash
+    git clone https://git.busybox.net/busybox
+    cd ./busybox/
+    rm -rf ./.git
+    rm ./.gitignore
+    ```
