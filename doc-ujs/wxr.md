@@ -1,6 +1,6 @@
 # 关于第一题的额外编译步骤
 
-## v1
+## v2
 
 ### 编译时添加的步骤
 
@@ -23,15 +23,24 @@ vim test_cube.c
 int main()
 {
     int num = 5;
+    int result_val = 0;
     long ret;
 
     printf("准备调用系统调用，计算 %d 的三次方...\n", num);
-    ret = syscall(__NR_calculate_cube, num);
-    printf("系统调用返回结果: %ld\n", ret);
-    if(ret == 125) {
-        printf("结果正确！\n");
+
+    ret = syscall(__NR_calculate_cube, num, &result_val);
+
+    if(ret == 0) {
+        printf("系统调用执行成功。\n");
+        printf("计算结果: %d\n", result_val);
+        
+        if(result_val == 125) {
+            printf("验证通过：结果正确！\n");
+        } else {
+            printf("验证失败：结果不正确！\n");
+        }
     } else {
-        printf("结果错误！\n");
+        printf("系统调用执行出错 (返回了错误码)！\n");
     }
 
     return 0;
@@ -40,9 +49,46 @@ int main()
 保存退出后使用以下方式编译并复制：
 ```bash
 gcc -m32 -static test_cube.c -o test_cube
-cd ..
-cp ./workdir-wxr/test_cube ./initramfs/test_cube
+cp ./test_cube ../initramfs/test_cube
+vim cube.c
 ```
+将以下内容复制进去：
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+
+#define __NR_calculate_cube 351
+
+int main(int argc, char *argv[])
+{
+    if (argc != 2) {
+        fprintf(stderr, "Usage: cube <number>\n");
+        return 1;
+    }
+
+    int num = atoi(argv[1]);
+    int result = 0;
+    long status;
+
+    status = syscall(__NR_calculate_cube, num, &result);
+
+    if (status == 0) {
+        printf("%d\n", result);
+        return 0;
+    } else {
+        perror("Syscall failed");
+        return 1;
+    }
+}
+```
+保存退出后再次使用以下方式编译并复制至 bin ：
+```bash
+gcc -m32 -static cube.c -o cube
+cp ./cube ../initramfs/bin/cube
+```
+
 之后，继续执行第 8 步的剩余步骤（cd ~/os-run/initramfs 开始）。
 
 ### 运行测试代码
@@ -51,7 +97,13 @@ cp ./workdir-wxr/test_cube ./initramfs/test_cube
 ```bash
 ./test_cube
 ```
-这份调用会使得系统输出一条日志，可以通过以下命令查看：
+这份调用会使得系统写入一条日志，可以通过以下命令查看：
 ```bash
 dmesg | tail
 ```
+同时，由于在 bin 中添加了 cube，可以直接使用这个命令行工具，如：
+```bash
+cube 8
+cube 28
+```
+使用命令行工具也可以生成日志，同样的方法可以查看。
