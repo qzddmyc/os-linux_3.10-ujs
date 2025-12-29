@@ -1,0 +1,140 @@
+1.使用 Dockerfile（已写好） 创建镜像并进入容器：
+docker build -t linux-3.10-native .
+docker run -it --rm -v "$(pwd)/output":/output linux-3.10-native
+
+2.执行编译
+make V=1 mrproper
+make ARCH=x86 i386_defconfig
+make ARCH=x86 -j$(nproc)
+
+3.拷贝出结果并退出：
+cp arch/x86/boot/bzImage /output/
+cp drivers/block/mg_disk.ko /output/
+exit
+
+4.准备运行
+mkdir -p ~/os-run
+cd ~/os-run
+sudo cp ~/os-linux_3.10-ujs/output/bzImage ~/os-run/
+sudo cp ~/os-linux_3.10-ujs/output/mg_disk.ko ~/os-run/
+
+5.克隆busybox
+cp -r ~/os-linux_3.10-ujs/busybox/. ./busybox/
+cd busybox
+make defconfig
+sed -i 's/# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
+sed -i 's/CONFIG_EXTRA_CFLAGS=""/CONFIG_EXTRA_CFLAGS="-m32"/' .config
+sed -i 's/CONFIG_EXTRA_LDFLAGS=""/CONFIG_EXTRA_LDFLAGS="-m32"/' .config
+
+6.去除模块
+make menuconfig
+
+7.编译busybox
+make -j$(nproc)
+make install CONFIG_PREFIX=../_install
+mkdir ~/os-run/initramfs/
+cp -a ../_install/* ~/os-run/initramfs/
+
+8.创建环境
+cd ~/os-run
+
+# 把驱动模块放到 initramfs 的根目录下
+cp mg_disk.ko initramfs/
+
+mkdir -p initramfs/{bin,sbin,etc,proc,sys,dev,mnt}
+
+# 编写 init 脚本
+cat > ~/os-run/initramfs/init << 'EOF'
+#!/bin/sh
+mount -t proc none /proc
+mount -t sysfs none /sys
+mount -t devtmpfs none /dev
+echo
+echo "=== Linux 3.10 Minimal Shell ==="
+echo "=== Loading Driver ==="
+# 可以在这里自动加载，或者手动加载，这里我们先留给手动操作体验
+exec /bin/sh
+EOF
+
+chmod +x ~/os-run/initramfs/init
+
+cd ~/os-run/initramfs
+find . | cpio -o -H newc | gzip > ../initramfs.img
+
+9.运行
+cd ~/os-run
+
+qemu-system-i386 \
+  -m 512M \
+  -kernel bzImage \
+  -initrd initramfs.img \
+  -append "console=ttyS0 earlyprintk=serial rdinit=/init" \
+  -nographic \
+  -serial mon:stdio
+
+
+
+测试
+1.动态加载驱动
+insmod /mg_disk.ko
+
+查找主设备号
+cat /proc/devices | grep mg_disk
+
+手动创建设备节点
+使用 mknod 命令创建块设备文件。
+/dev/mg_disk：设备路径
+b：表示 Block Device (块设备)
+253：替换为你上一步查到的实际数字
+0：次设备号 (Minor Number)，我们在代码里是从 0 开始的。
+执行：mknod /dev/mg_disk b xxx 0
+检测设备是否存在
+ls -l /dev/mg_disk
+
+手动创建 /dev/zero 和 /dev/null
+这两个是 Linux 系统中最基础的设备，c 代表字符设备，后面的数字是主次设备号
+# 创建 /dev/zero (主设备号1，次设备号5)
+mknod /dev/zero c 1 5
+
+# 创建 /dev/null (主设备号1，次设备号3) - 为了保险起见一起创建
+mknod /dev/null c 1 3
+
+彻底清空设备数据
+dd if=/dev/zero of=/dev/mg_disk bs=1M count=256
+
+2.格式化
+mkfs.ext2 /dev/mg_disk
+
+3.挂载设备
+mount -t ext2 /dev/mg_disk /mnt
+
+4.验证磁盘容量
+df -h
+
+5.文件读写
+# 写入测试
+echo "Linux OS Course Design Passed!" > /mnt/final_success.txt
+# 读取测试
+cat /mnt/final_success.txt
+
+6.大文件压力测试
+# 写入一个 20MB 的文件
+dd if=/dev/zero of=/mnt/testfile bs=1M count=20
+# 查看文件详细信息
+ls -lh /mnt/testfile
+cat > /mnt/poem.txt << 'EOF'
+Two roads diverged in a yellow wood,
+And sorry I could not travel both
+And be one traveler, long I stood
+And looked down one as far as I could
+To where it bent in the undergrowth;
+EOF
+cat /mnt/poem.txt
+
+7.动态卸载
+# 卸载文件系统
+umount /mnt
+# 移除驱动
+rmmod mg_disk
+# 确认驱动已移除 (不应有输出)
+lsmod | grep mg_disk
