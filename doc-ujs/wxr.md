@@ -58,17 +58,42 @@ vim cube.c
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <errno.h>
+#include <limits.h>
+#include <string.h>
 
 #define __NR_calculate_cube 351
 
 int main(int argc, char *argv[])
 {
     if (argc != 2) {
-        fprintf(stderr, "Usage: cube <number>\n");
+        fprintf(stderr, "Usage: cube <Integer>\n");
         return 1;
     }
 
-    int num = atoi(argv[1]);
+    char *endptr;
+    long val;
+
+    errno = 0;
+    val = strtol(argv[1], &endptr, 10);
+
+    if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
+        || (errno != 0 && val == 0)) {
+        perror("Error: Input error");
+        return 1;
+    }
+
+    if (endptr == argv[1] || *endptr != '\0') {
+        fprintf(stderr, "Error: parameter should be an Integer\n");
+        return 1;
+    }
+
+    if (val > INT_MAX || val < INT_MIN) {
+        fprintf(stderr, "Error: Integer out of range\n");
+        return 1;
+    }
+
+    int num = (int)val;
     int result = 0;
     long status;
 
@@ -104,6 +129,6 @@ dmesg | tail
 同时，由于在 bin 中添加了 cube，可以直接使用这个命令行工具，如：
 ```bash
 cube 8
-cube 28
+cube -12
 ```
 使用命令行工具也可以生成日志，同样的方法可以查看。
