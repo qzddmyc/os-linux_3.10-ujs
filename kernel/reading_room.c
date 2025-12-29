@@ -7,13 +7,21 @@
 #include <linux/init.h>
 
 #define MAX_SEATS 5
-#define MAX_INFO_LEN 32
+#define MAX_NAME_LEN 32
+#define MAX_PHONE_LEN 16
+
+// 读者信息结构体
+struct reader_info {
+    char name[MAX_NAME_LEN];
+    char phone[MAX_PHONE_LEN];
+    int valid;  // 标记该座位是否被占用
+};
 
 // 共享数据结构
 struct reading_room_data {
     int seat_count;                    // 当前座位数
     int reader_count;                  // 当前读者数
-    char reader_info[MAX_SEATS][MAX_INFO_LEN]; // 读者信息
+    struct reader_info readers[MAX_SEATS];  // 读者信息数组
     struct semaphore seat_sem;         // 座位信号量
     struct semaphore mutex;            // 互斥信号量
     struct semaphore info_mutex;       // 个人信息互斥
@@ -24,6 +32,8 @@ static struct reading_room_data *room_data = NULL;
 // 初始化阅览室
 static int __init init_reading_room(void)
 {
+    int i;
+    
     room_data = kmalloc(sizeof(struct reading_room_data), GFP_KERNEL);
     if (!room_data)
         return -ENOMEM;
@@ -35,38 +45,52 @@ static int __init init_reading_room(void)
     sema_init(&room_data->mutex, 1);             // 互斥锁
     sema_init(&room_data->info_mutex, 1);        // 信息互斥
     
-    memset(room_data->reader_info, 0, sizeof(room_data->reader_info));
+    // 初始化所有读者信息
+    for (i = 0; i < MAX_SEATS; i++) {
+        memset(&room_data->readers[i], 0, sizeof(struct reader_info));
+        room_data->readers[i].valid = 0;  // 标记为无效/空座位
+    }
     
     printk(KERN_INFO "Reading room initialized with %d seats\n", MAX_SEATS);
     return 0;
 }
 
-// 读者注册系统调用 - 修正了座位分配逻辑
-SYSCALL_DEFINE2(reader_register, char __user *, user_info, int, info_len)
+// 读者注册系统调用 - 非阻塞版本
+SYSCALL_DEFINE3(reader_register, char __user *, user_name, 
+                char __user *, user_phone, int, name_len)
 {
     int seat_id = -1;
     int i;
-    char info[MAX_INFO_LEN];
+    char name[MAX_NAME_LEN];
+    char phone[MAX_PHONE_LEN];
     
-    if (info_len > MAX_INFO_LEN || info_len <= 0)
+    if (name_len > MAX_NAME_LEN || name_len <= 0)
         return -EINVAL;
     
-    // 复制用户空间信息
-    if (copy_from_user(info, user_info, info_len))
+    // 复制用户名
+    if (copy_from_user(name, user_name, name_len))
         return -EFAULT;
-    info[info_len] = '\0';
+    name[name_len] = '\0';
     
-    // 获取座位
-    if (down_interruptible(&room_data->seat_sem))
-        return -ERESTARTSYS;
+    // 复制手机号
+    if (copy_from_user(phone, user_phone, MAX_PHONE_LEN - 1))
+        return -EFAULT;
+    phone[MAX_PHONE_LEN - 1] = '\0';
+    
+    // 尝试获取座位（非阻塞）
+    if (down_trylock(&room_data->seat_sem)) {
+        return -EBUSY;  // 座位已满，立即返回EBUSY错误
+    }
     
     // 互斥访问
-    if (down_interruptible(&room_data->mutex))
+    if (down_interruptible(&room_data->mutex)) {
+        up(&room_data->seat_sem);  // 释放座位信号量
         return -ERESTARTSYS;
+    }
     
     // 查找第一个空座位
     for (i = 0; i < MAX_SEATS; i++) {
-        if (room_data->reader_info[i][0] == '\0') {
+        if (!room_data->readers[i].valid) {
             seat_id = i;
             break;
         }
@@ -80,21 +104,31 @@ SYSCALL_DEFINE2(reader_register, char __user *, user_info, int, info_len)
     }
     
     // 互斥写入个人信息
-    if (down_interruptible(&room_data->info_mutex))
+    if (down_interruptible(&room_data->info_mutex)) {
+        up(&room_data->mutex);
+        up(&room_data->seat_sem);
         return -ERESTARTSYS;
+    }
     
-    strncpy(room_data->reader_info[seat_id], info, MAX_INFO_LEN-1);
-    room_data->reader_info[seat_id][MAX_INFO_LEN-1] = '\0';
+    // 保存读者信息（姓名和手机号）
+    strncpy(room_data->readers[seat_id].name, name, MAX_NAME_LEN - 1);
+    room_data->readers[seat_id].name[MAX_NAME_LEN - 1] = '\0';
+    
+    strncpy(room_data->readers[seat_id].phone, phone, MAX_PHONE_LEN - 1);
+    room_data->readers[seat_id].phone[MAX_PHONE_LEN - 1] = '\0';
+    
+    room_data->readers[seat_id].valid = 1;
     room_data->reader_count++;  // 增加读者计数
     
     up(&room_data->info_mutex);
     up(&room_data->mutex);
     
-    printk(KERN_INFO "Reader registered: %s, Seat: %d\n", info, seat_id);
+    printk(KERN_INFO "Reader registered: %s (Phone: %s), Seat: %d\n", 
+           name, phone, seat_id);
     return seat_id;  // 返回实际的座位号（0-4）
 }
 
-// 读者注销系统调用
+// 读者注销系统调用 - 修改为显示姓名和手机号
 SYSCALL_DEFINE1(reader_unregister, int, seat_id)
 {
     if (seat_id < 0 || seat_id >= MAX_SEATS)
@@ -105,14 +139,20 @@ SYSCALL_DEFINE1(reader_unregister, int, seat_id)
         return -ERESTARTSYS;
     
     // 如果座位是空的，直接返回
-    if (room_data->reader_info[seat_id][0] == '\0') {
+    if (!room_data->readers[seat_id].valid) {
         up(&room_data->info_mutex);
         return 0;  // 座位本来就是空的，不需要操作
     }
     
-    printk(KERN_INFO "Reader unregistered: %s, Seat: %d\n", 
-           room_data->reader_info[seat_id], seat_id);
-    memset(room_data->reader_info[seat_id], 0, MAX_INFO_LEN);
+    // 打印注销信息（包括姓名和手机号）
+    printk(KERN_INFO "Reader unregistered: %s (Phone: %s), Seat: %d\n", 
+           room_data->readers[seat_id].name, 
+           room_data->readers[seat_id].phone, 
+           seat_id);
+    
+    // 清除读者信息
+    memset(&room_data->readers[seat_id], 0, sizeof(struct reader_info));
+    room_data->readers[seat_id].valid = 0;
     
     up(&room_data->info_mutex);
     
@@ -133,7 +173,7 @@ SYSCALL_DEFINE1(reader_unregister, int, seat_id)
     return 0;
 }
 
-// 获取阅览室状态 - 完全重写修复所有问题
+// 获取阅览室状态 - 修改为显示姓名和手机号
 SYSCALL_DEFINE3(get_room_status, char __user *, buffer, int, buf_size, int __user *, reader_count)
 {
     int i, total_len = 0;
@@ -183,12 +223,15 @@ SYSCALL_DEFINE3(get_room_status, char __user *, buffer, int, buf_size, int __use
         return -ERESTARTSYS;
     }
     
-    // 显示所有有读者的座位
+    // 显示所有有读者的座位（现在显示姓名和手机号）
     for (i = 0; i < MAX_SEATS; i++) {
-        if (room_data->reader_info[i][0] != '\0') {
+        if (room_data->readers[i].valid) {
             occupied_seats++;
             total_len += snprintf(kbuf + total_len, buf_size - total_len,
-                                "  Seat %d: %s\n", i, room_data->reader_info[i]);
+                                "  Seat %d: %s (Phone: %s)\n", 
+                                i, 
+                                room_data->readers[i].name,
+                                room_data->readers[i].phone);
         }
     }
     
