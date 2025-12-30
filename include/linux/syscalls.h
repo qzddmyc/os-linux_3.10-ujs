@@ -841,5 +841,10 @@ asmlinkage long sys_process_vm_writev(pid_t pid,
 asmlinkage long sys_kcmp(pid_t pid1, pid_t pid2, int type,
 			 unsigned long idx1, unsigned long idx2);
 asmlinkage long sys_finit_module(int fd, const char __user *uargs, int flags);
+
 asmlinkage long sys_calculate_cube(int num, int __user *result);
+
+asmlinkage long sys_reader_register(char __user *user_name, char __user *user_phone, int name_len);
+asmlinkage long sys_reader_unregister(int seat_id);
+asmlinkage long sys_get_room_status(char __user *buffer, int buf_size, int __user *reader_count);
 #endif
