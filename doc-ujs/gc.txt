@@ -1,0 +1,141 @@
+# 使用 Dockerfile（已写好） 创建镜像并进入容器：
+
+docker build -t linux-3.10-native .
+docker run -it --rm -v "$(pwd)/output":/output linux-3.10-native
+
+# 执行编译
+
+make V=1 mrproper
+make ARCH=x86 i386_defconfig
+make ARCH=x86 -j$(nproc)
+
+# 编译模块 (生成 myext3.ko)
+make ARCH=x86 M=fs/myext3 modules
+
+
+# find . -name "jbd.ko"
+
+# 拷贝出结果并退出：
+
+cp arch/x86/boot/bzImage /output/
+cp ./fs/jbd/jbd.ko /output/
+cp fs/myext3/myext3.ko /output/
+
+exit
+
+# 拷贝完成后，编译出的文件位于项目目录的 ./output/bzImage
+
+
+# 准备运行工作：
+
+mkdir -p ~/os-run
+cd ~/os-run
+cp ~/os-linux_3.10-ujs/output/bzImage ~/os-run/
+
+# 克隆 busybox 并准备编译：
+
+cp -r ~/os-linux_3.10-ujs/busybox/. ./busybox/
+cd busybox
+make defconfig
+sed -i 's/# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
+sed -i 's/CONFIG_EXTRA_CFLAGS=""/CONFIG_EXTRA_CFLAGS="-m32"/' .config
+sed -i 's/CONFIG_EXTRA_LDFLAGS=""/CONFIG_EXTRA_LDFLAGS="-m32"/' .config
+
+# 手动去除 tc 模块：
+make menuconfig
+
+
+# 编译 busybox：
+
+make -j$(nproc)
+make install CONFIG_PREFIX=../_install
+mkdir ~/os-run/initramfs/
+cp -a ../_install/* ~/os-run/initramfs/
+
+
+创建环境：
+
+cd ~/os-run
+mkdir -p initramfs/{bin,sbin,etc,proc,sys,dev}
+
+cp ~/os-linux_3.10-ujs/output/myext3.ko ~/os-run/initramfs/
+cp ~/os-linux_3.10-ujs/output/jbd.ko ~/os-run/initramfs/
+
+
+cat > ~/os-run/initramfs/init << 'EOF'
+#!/bin/sh
+mkdir -p /dev /proc /sys
+mount -t proc none /proc
+mount -t sysfs none /sys
+mount -t devtmpfs none /dev
+echo
+echo "=== My custom Linux with MyExt3 Module ==="
+insmod /jbd.ko  
+insmod /myext3.ko  
+echo "--- Module Load Status ---"
+lsmod
+echo "--- Supported Filesystems ---"
+cat /proc/filesystems | grep myext3
+
+echo "=== MyExt3 OS Shell Ready ==="
+exec /bin/sh
+EOF
+
+chmod +x ~/os-run/initramfs/init
+
+
+cd ~/os-run/initramfs
+find . | cpio -o -H newc | gzip > ../initramfs.img
+
+
+cd ~/os-run
+# 创建 20MB 磁盘并格式化为 ext3 结构
+dd if=/dev/zero of=test_disk.img bs=1M count=20
+mkfs.ext3 test_disk.img
+
+
+# 运行：
+
+cd ~/os-run
+qemu-system-i386 \
+  -kernel ./bzImage \
+  -initrd ./initramfs.img \
+  -drive file=$(pwd)/test_disk.img,format=raw,if=ide \
+  -append "console=ttyS0 earlyprintk=serial rdinit=/init" \
+  -nographic \
+  -serial mon:stdio
+
+# 验证:
+
+lsmod | grep myext3
+
+# 确认系统已识别新的文件系统名称
+cat /proc/filesystems | grep myext3
+# 预期结果：输出包含 myext3，证明（要求1）和（要求3）中的名称修改已生效。
+
+# 创建挂载点
+mkdir -p /mnt
+mknod /dev/sda b 8 0
+# 使用新文件系统名称挂载磁盘
+mount -t myext3 /dev/sda /mnt
+
+# 执行写操作，触发你在 file.c 中添加的 printk
+echo "UJS Experiment Test" > /mnt/lab_test.txt
+
+# 强制将缓存写入磁盘，确保触发内核函数
+sync
+
+# 查看后台打印信息
+dmesg | tail -n 10
+# 预期结果：在 dmesg 输出中看到类似 [MYEXT3] Data is being written to a file! 的信息。证明（要求3）功能实现。
+
+
+# 先取消挂载（如果不取消挂载，模块无法卸载）
+umount /mnt
+
+# 动态卸载模块
+rmmod myext3
+rmmod jbd
+# 检查模块列表
+lsmod
+# 预期结果：lsmod 列表中不再出现 myext3。证明（要求2）动态卸载成功。
