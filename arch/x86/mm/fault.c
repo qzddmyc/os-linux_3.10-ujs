@@ -1006,6 +1006,7 @@ static inline bool smap_violation(int error_code, struct pt_regs *regs)
 static void __kprobes
 __do_page_fault(struct pt_regs *regs, unsigned long error_code)
 {
+	pfcount++;
 	struct vm_area_struct *vma;
 	struct task_struct *tsk;
 	unsigned long address;
