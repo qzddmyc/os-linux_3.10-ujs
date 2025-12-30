@@ -79,3 +79,10 @@ qemu-system-i386 \
 # 系统启动后，屏幕上会直接打印 Checking Page Faults: Current Page Faults: xxx。
 # 进入 Shell 后，多敲几个命令（如 ls, pwd）。
 # 再次输入 cat /proc/pfcount，数字应该会增加。
+
+# 可以参考使用以下命令：
+
+ls
+cat /proc/pfcount
+ls
+cat /proc/pfcount
