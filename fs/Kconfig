@@ -12,7 +12,15 @@ if BLOCK
 
 source "fs/ext2/Kconfig"
 source "fs/ext3/Kconfig"
+source "fs/myext3/Kconfig"
 source "fs/ext4/Kconfig"
+
+config MYEXT3_FS
+    tristate "My Ext3 compatible filesystem"
+    select JBD
+    help
+      This is a modified version of ext3 for OS experiment.
+      Select 'M' to compile as a module.
 
 config FS_XIP
 # execute in place

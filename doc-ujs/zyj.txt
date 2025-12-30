@@ -1,0 +1,81 @@
+docker build -t linux-3.10-native .
+docker run -it --rm -v "$(pwd)/output":/output linux-3.10-native
+
+# docker run -it --rm -v "$(pwd)":/root/linux-src -v "$(pwd)/output":/output linux-3.10-native
+
+make mrproper
+
+make ARCH=x86 i386_defconfig
+make ARCH=x86 -j$(nproc)
+make ARCH=x86 -C . M=./my_pfcount modules
+
+cp arch/x86/boot/bzImage /output/
+cp my_pfcount/pfcount.ko /output/
+
+exit
+
+
+mkdir -p ~/os-run/busybox
+cd ~/os-run
+cp ~/os-linux_3.10-ujs/output/bzImage ~/os-run/
+cp -r ~/os-linux_3.10-ujs/busybox/. ./busybox/
+
+cd busybox
+make distclean
+make defconfig
+sed -i 's/# CONFIG_STATIC is not set/CONFIG_STATIC=y/' .config
+sed -i 's/CONFIG_EXTRA_CFLAGS=""/CONFIG_EXTRA_CFLAGS="-m32"/' .config
+sed -i 's/CONFIG_EXTRA_LDFLAGS=""/CONFIG_EXTRA_LDFLAGS="-m32"/' .config
+# 关闭 TC 模块防止报错
+sed -i 's/CONFIG_TC=y/# CONFIG_TC is not set/' .config
+sed -i 's/CONFIG_FEATURE_TC_INGRESS=y/# CONFIG_FEATURE_TC_INGRESS is not set/' .config
+
+make -j$(nproc)
+make install CONFIG_PREFIX=../_install
+
+mkdir ~/os-run/initramfs/
+cp -a ../_install/* ~/os-run/initramfs/
+
+cd ~/os-run
+mkdir -p initramfs/{bin,sbin,etc,proc,sys,dev}
+
+cd initramfs
+cp ~/os-linux_3.10-ujs/output/pfcount.ko .
+
+
+cat > init << 'EOF'
+#!/bin/sh
+mount -t proc none /proc
+mount -t sysfs none /sys
+mount -t devtmpfs none /dev
+echo "=== System Booted ==="
+# 加载模块
+echo "Loading module..."
+insmod /pfcount.ko
+# 验证
+echo "Checking Page Faults:"
+cat /proc/pfcount
+exec /bin/sh
+EOF
+
+chmod +x init
+
+find . | cpio -o -H newc | gzip > ../initramfs.img
+
+
+# ===========================================================================
+
+cd ~/os-run
+
+qemu-system-i386 \
+  -kernel bzImage \
+  -initrd initramfs.img \
+  -append "console=ttyS0 earlyprintk=serial rdinit=/init" \
+  -nographic \
+  -serial mon:stdio
+
+
+
+# 系统启动后，屏幕上会直接打印 Checking Page Faults: Current Page Faults: xxx。
+# 进入 Shell 后，多敲几个命令（如 ls, pwd）。
+# 再次输入 cat /proc/pfcount，数字应该会增加。

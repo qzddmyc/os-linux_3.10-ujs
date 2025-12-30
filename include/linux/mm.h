@@ -33,7 +33,7 @@ extern unsigned long num_physpages;
 extern unsigned long totalram_pages;
 extern void * high_memory;
 extern int page_cluster;
-
+extern unsigned long volatile pfcount;
 #ifdef CONFIG_SYSCTL
 extern int sysctl_legacy_va_layout;
 #else
