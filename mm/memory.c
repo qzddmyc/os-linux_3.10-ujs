@@ -68,7 +68,8 @@
 #include <asm/pgtable.h>
 
 #include "internal.h"
-
+unsigned long volatile pfcount = 0;
+EXPORT_SYMBOL(pfcount);
 #ifdef LAST_NID_NOT_IN_PAGE_FLAGS
 #warning Unfortunate NUMA and NUMA Balancing config, growing page-frame for last_nid.
 #endif
