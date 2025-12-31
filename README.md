@@ -225,7 +225,7 @@
     *如果想要退出，按下 Ctrl+A，松开后按下 X 即可。*
 
 ## 其他事项
-### 如何在 wsl 中使用 vpn
+### 一、如何在 wsl 中使用 vpn
 > **请优先看下面的 “wsl 中无法链接到 github 仓库的解决方案” 步骤，如果仍然无法拉取仓库再考虑此说明。**
 
 > 如果 pull 与 push 操作失败，可参考以下基于 Clash Verge 的方法。
@@ -244,7 +244,7 @@
     curl ipinfo.io
     ```
 
-### 关于代码的二次编译
+### 二、关于代码的二次编译
 
 1. 如果你的代码已经被编译过了，你在修改了代码之后想重新编译，你可以使用以下命令。***执行目录为项目根目录（os-linux_3.10-ujs 文件夹）***：
     ```bash
@@ -254,7 +254,7 @@
     ```
     之后，重新执行“编译与运行你的内核”部分的命令即可。
 
-### 关于此项目中的 busybox 目录
+### 三、关于此项目中的 busybox 目录
 
 1. 这里的 busybox 是使用以下方式获取的，在此略作说明：
     ```bash
@@ -264,17 +264,17 @@
     rm ./.gitignore
     ```
 
-### 关于 raw 分支
+### 四、关于 raw 分支
 
 1. raw 分支为未进行任何开发时的源码备份，不可以进行任何修改，已作锁定。
 
-### 如何在 vscode 中打开 wsl 中的文件
+### 五、如何在 vscode 中打开 wsl 中的文件
 
 1. 前往扩展商店下载 “WSL” 插件，注意是 Microsoft 发行的。
 
 2. 在 vscode 顶端的搜索框输入：“> wsl”，选择 “Connect to wsl”，然后打开你的项目文件夹即可。
 
-### wsl 中无法链接到 github 仓库的解决方案
+### 六、wsl 中无法链接到 github 仓库的解决方案
 
 1. 在 wsl 中输入以下命令，创建你的 ssh key：
     ```bash
@@ -302,4 +302,18 @@
     ```bash
     cd ~
     git clone git@github.com:qzddmyc/os-linux_3.10-ujs.git
+    ```
+
+### 七、关于 docker 容器的清理
+1. 如果你重复使用 docker build 创建容器，这会导致产生很多的碎片，可以使用以下命令查看：
+    ```bash
+    docker images
+    ```
+    当然，这条命令可以清楚地看到所有容器占据的总空间：
+    ```bash
+    docker system df
+    ```
+2. 你可以使用以下命令安全清除所有被标记为 \<none\> 的无用容器：
+    ```bash
+    docker system prune
     ```
