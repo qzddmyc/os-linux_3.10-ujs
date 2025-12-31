@@ -22,7 +22,7 @@
     cp my_pfcount/pfcount.ko /output/
     exit
     ```
-4. 将产物拷贝到运行目录（此步骤不再展示依赖项的安装）
+4. 将产物拷贝到运行目录
     ```bash
     mkdir -p ~/os-run
     cd ~/os-run

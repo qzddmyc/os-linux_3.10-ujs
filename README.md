@@ -85,12 +85,27 @@
     sudo systemctl daemon-reload
     sudo systemctl restart docker
     ```
+6. 安装依赖
+    ```bash
+    sudo apt update && sudo apt install -y \
+    qemu-system-x86 \
+    build-essential \
+    bc \
+    bison \
+    flex \
+    libncurses-dev \
+    libssl-dev \
+    libelf-dev \
+    cpio \
+    git \
+    gcc-multilib
+    ```
 
 ### 编译与运行你的内核
 
 > 以下操作需要在你的项目根目录（os-linux_3.10-ujs）中执行。这份编译方式可以成功编译未经修改的源代码。
 
-> 下面的操作的大致描述如下：创建一个包含 centos7 环境的 docker 容器，然后在容器内使用 gcc 将你的代码编译为一份二进制文件。之后退出 docker，将编译出的容器拷贝到另一份目录中（不在你的代码目录，具体而言是 ~/os-run），然后在此目录下使用 QEMU 与 BusyBox 创建环境并运行你的系统。
+> 下面的操作的大致描述如下：创建一个包含 centos7 环境的 docker 容器，然后在容器内使用 gcc 将你的代码编译为一份二进制文件。之后退出 docker，将编译出的内核 bzImage 拷贝到另一份目录中（不在你的代码目录，具体而言是 ~/os-run），然后在此目录下使用 QEMU （虚拟硬件 + 引导程序）与 BusyBox （用户空间环境，提供 Shell 和基础命令）创建环境并运行你的系统。
 
 1. 使用 Dockerfile（已写好） 创建镜像并进入容器：
     ```bash
@@ -125,9 +140,6 @@
     ***注意：下方命令中最后一条中的 ~/os-linux_3.10-ujs 需要替换为你的实际项目目录，你可以使用 pwd 命令查看当前所在的目录。如果你使用此文档中的命令拉取的仓库，则不需要进行任何修改。***
 
     ```bash
-    sudo apt update
-    sudo apt install -y qemu-system-x86 build-essential bc bison flex libncurses-dev libssl-dev libelf-dev cpio git
-    sudo apt install -y gcc-multilib
     mkdir -p ~/os-run
     cd ~/os-run
     cp ~/os-linux_3.10-ujs/output/bzImage ~/os-run/
@@ -195,6 +207,8 @@
     成功的标志为出现：4734 blocks。这个数字可能不同，但只要不是个位数就可以。
 
     **如果需要在你编译出的系统中添加测试文件，请在 chmod +x ~/os-run/initramfs/init 步骤后，在 ~/os-run/initramfs 目录下添加你想要带到新系统中的额外初始文件，之后按照剩余步骤执行即可。值得说明的是，initramfs 文件夹就是你创建的新系统的根目录。**
+
+    另外，推荐编译 c 代码的方式为：`gcc -m32 -static your_code.c -o your_code`，你可以新建一个临时目录进行编译，再将编译结果拷贝至 initramfs 文件夹下。
 9. 运行：
     ```bash
     cd ~/os-run
